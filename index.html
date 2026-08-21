@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Financiero Personal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="onboarding" class="onboarding">
+  <div class="onboarding-card card">
+    <h1>Plan Financiero Personal</h1>
+    <p class="hint">
+      Tu única base de datos es un archivo <strong>.json</strong> que tú controlas: se descarga a tu
+      equipo y vuelve a subirse cuando quieras seguir editando. Esta app no guarda nada en el
+      navegador ni en ningún servidor.
+    </p>
+    <div class="onboarding-actions">
+      <button id="startBlankBtn" class="btn btn-primary">Crear mi plan desde cero</button>
+      <button id="startDemoBtn" class="btn btn-ghost">Cargar ejemplo explicativo</button>
+      <label class="btn btn-ghost file-label">Importar mi archivo .json
+        <input type="file" id="onboardingImportInput" accept="application/json" hidden>
+      </label>
+    </div>
+    <p id="onboardingError" class="onboarding-error"></p>
+  </div>
+</div>
+
+<div id="app" class="app-shell">
+
+<header class="topbar">
+  <div class="brand">Plan Financiero</div>
+  <div class="profile-controls">
+    <select id="profileSelect"></select>
+    <button id="newProfileBtn" class="btn btn-ghost" title="Crear perfil">+ Perfil</button>
+    <button id="renameProfileBtn" class="btn btn-ghost" title="Renombrar perfil">Renombrar</button>
+    <button id="deleteProfileBtn" class="btn btn-ghost danger" title="Eliminar perfil">Eliminar</button>
+    <span class="sep"></span>
+    <span id="dirtyIndicator" class="dirty-indicator"></span>
+    <button id="exportBtn" class="btn btn-primary">Descargar JSON</button>
+    <label class="btn btn-ghost file-label">Importar
+      <input type="file" id="importInput" accept="application/json" hidden>
+    </label>
+    <button id="closeFileBtn" class="btn btn-ghost" title="Cerrar archivo actual">Cerrar archivo</button>
+    <span class="sep"></span>
+    <label class="btn btn-ghost advanced-toggle">
+      <input type="checkbox" id="advancedToggle"> Modo avanzado
+    </label>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="resumen">Resumen</button>
+  <button class="tab-btn" data-tab="mensual">Distribución mensual</button>
+  <button class="tab-btn" data-tab="patrimonio">Patrimonio objetivo</button>
+  <button class="tab-btn" data-tab="proyeccion">Evolución del capital</button>
+  <button class="tab-btn advanced-only" data-tab="carteras">Carteras</button>
+  <button class="tab-btn advanced-only" data-tab="seguimiento">Seguimiento</button>
+</nav>
+
+<main class="container">
+
+  <div id="demoBanner" class="demo-banner" hidden>
+    Estás viendo datos de ejemplo (ficticios) solo para ilustrar cómo funciona la app.
+    Edita los campos libremente o pulsa "Cerrar archivo" para empezar con tus propios datos.
+  </div>
+
+  <section id="tab-resumen" class="tab-panel active">
+    <div class="income-card card">
+      <label for="incomeInput">Ingreso mensual (sueldo neto)</label>
+      <input type="number" id="incomeInput" min="0" step="10" placeholder="Ej. 1700">
+    </div>
+
+    <div class="grid-cards" id="summaryCards"></div>
+
+    <div class="grid-charts">
+      <div class="card chart-card">
+        <h3>Distribución mensual (% del sueldo)</h3>
+        <div class="chart-canvas"><canvas id="chartMensual"></canvas></div>
+        <div id="statusMensual" class="status-line"></div>
+      </div>
+      <div class="card chart-card">
+        <h3>Patrimonio objetivo (% del capital)</h3>
+        <div class="chart-canvas"><canvas id="chartPatrimonio"></canvas></div>
+        <div id="statusPatrimonio" class="status-line"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-mensual" class="tab-panel">
+    <div class="section-header">
+      <h2>Distribución de la aportación mensual</h2>
+      <button class="btn btn-primary" id="addMonthlyBtn">+ Añadir bloque</button>
+    </div>
+    <p class="hint">Define tus propios bloques (gastos, ahorro, inversión...) y el % del sueldo que destinas a cada uno.</p>
+    <div class="table-wrap">
+      <table id="monthlyTable" class="editable-table">
+        <thead>
+          <tr>
+            <th>Bloque</th>
+            <th>Finalidad</th>
+            <th>Horizonte</th>
+            <th class="num">% objetivo</th>
+            <th>Cuenta / producto</th>
+            <th class="num">Rentabilidad</th>
+            <th class="num">Capital acumulado</th>
+            <th class="num">Importe mensual</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-patrimonio" class="tab-panel">
+    <div class="section-header">
+      <h2>Estructura objetivo del capital total</h2>
+      <button class="btn btn-primary" id="addCapitalBtn">+ Añadir bloque</button>
+    </div>
+    <p class="hint">Define cómo quieres que se reparta tu patrimonio total y compáralo con la realidad actual.</p>
+    <div class="table-wrap">
+      <table id="capitalTable" class="editable-table">
+        <thead>
+          <tr>
+            <th>Bloque</th>
+            <th>Finalidad</th>
+            <th>Horizonte</th>
+            <th class="num">% objetivo</th>
+            <th>Vehículo previsto</th>
+            <th class="num">Capital actual</th>
+            <th class="num">% actual</th>
+            <th class="num">Desviación</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="table-foot" id="capitalFoot"></div>
+    </div>
+  </section>
+
+  <section id="tab-proyeccion" class="tab-panel">
+    <div class="section-header">
+      <h2>Evolución del capital a distintos plazos</h2>
+    </div>
+    <p class="hint">Proyección basada en el capital acumulado, la aportación mensual y la rentabilidad indicada de cada bloque (pestaña "Distribución mensual"). Es una estimación de interés compuesto, no una garantía de rentabilidad futura.</p>
+
+    <div class="card projection-controls">
+      <div class="slider-row">
+        <label for="horizonRange">Horizonte temporal</label>
+        <input type="range" id="horizonRange" min="1" max="40" step="1" value="20">
+        <input type="number" id="horizonNumber" min="1" max="40" step="1" value="20">
+        <span>años</span>
+      </div>
+      <div class="preset-row" id="horizonPresets">
+        <button type="button" class="btn btn-ghost preset-btn" data-years="1">1 año</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-years="5">5 años</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-years="10">10 años</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-years="15">15 años</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-years="20">20 años</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-years="30">30 años</button>
+      </div>
+    </div>
+
+    <div class="grid-cards" id="projectionCards"></div>
+
+    <div class="card chart-card">
+      <h3>Capital proyectado por bloque (0 a <span id="horizonLabel">20</span> años)</h3>
+      <div class="chart-canvas chart-canvas-tall"><canvas id="chartProjection"></canvas></div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="projectionTable" class="editable-table">
+        <thead>
+          <tr>
+            <th>Bloque</th>
+            <th class="num">Capital inicial</th>
+            <th class="num">Aportación mensual</th>
+            <th class="num">Rentabilidad anual</th>
+            <th class="num">Capital proyectado</th>
+            <th class="num">Aportado en el periodo</th>
+            <th class="num">Interés generado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="table-foot" id="projectionFoot"></div>
+    </div>
+  </section>
+
+  <section id="tab-carteras" class="tab-panel">
+    <div class="section-header">
+      <h2>Cartera dentro de un bloque</h2>
+    </div>
+    <p class="hint">Elige un bloque de patrimonio y detalla los activos que lo componen (ETF, fondos, etc.).</p>
+    <div class="portfolio-controls">
+      <label for="portfolioBucketSelect">Bloque:</label>
+      <select id="portfolioBucketSelect"></select>
+      <button class="btn btn-primary" id="addAssetBtn">+ Añadir activo</button>
+    </div>
+    <div class="table-wrap">
+      <table id="portfolioTable" class="editable-table">
+        <thead>
+          <tr>
+            <th>Activo / producto</th>
+            <th>ISIN</th>
+            <th class="num">Peso en el bloque</th>
+            <th class="num">Peso sobre capital total</th>
+            <th>Qué cubre</th>
+            <th>Función en la cartera</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="table-foot" id="portfolioFoot"></div>
+    </div>
+  </section>
+
+  <section id="tab-seguimiento" class="tab-panel">
+    <div class="section-header">
+      <h2>Seguimiento y revisión</h2>
+      <button class="btn btn-primary" id="addRuleBtn">+ Añadir regla</button>
+    </div>
+    <div class="table-wrap">
+      <table id="rulesTable" class="editable-table">
+        <thead>
+          <tr>
+            <th>Frecuencia</th>
+            <th>Qué revisar</th>
+            <th>Qué comprobar</th>
+            <th>Acción prevista</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
